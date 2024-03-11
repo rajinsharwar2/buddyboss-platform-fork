@@ -58,26 +58,16 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Composer Update
-        run: composer update
+        run: |
+          composer update
 
       - name: Install PHPCS
         run: composer require --dev squizlabs/php_codesniffer
 
-      - name: Get modified files and lines
-        id: changed_lines
+      - name: Get changed files and lines
+        id: changes
         uses: hestonhoffman/changed-lines@v1
 
-      - name: Extract changed files and lines
-        id: extract_changes
+      - name: Check PHPCS issues on changed lines
         run: |
-          echo "${{ steps.changed_lines.outputs.changed_files }}" > changed_files.txt
-          echo "${{ steps.changed_lines.outputs.changed_lines }}" > changed_lines.txt
-
-      - name: Check PHPCS issues on modified lines
-        run: |
-          while IFS= read -r file; do
-            lines=$(jq -r --arg file "$file" '.[$file | split("/")[-1]] | join(",")' changed_lines.txt)
-            if [ ! -z "$lines" ]; then
-              vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- "$file" --line-list="$lines"
-            fi
-          done < changed_files.txt
+          echo "${{ steps.changes.outputs.changed_files }}" | xargs -I {} sh -c "vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- {}"
