@@ -25,7 +25,7 @@ jobs:
       - name: Get changed files and lines
         id: changed_files
         run: |
-          git diff --name-status origin/main HEAD | awk '$1 != "D" {print $2}' > changed_files.txt
+          git diff --name-status origin/release HEAD | awk '$1 != "D" {print $2}' > changed_files.txt
           cat changed_files.txt | xargs -I % sh -c "git diff -U0 -- % | tail -n +5 | sed '/@@/!d;s/^[^+]/+/;s/^+//;s/[-+].*//' | sort -nu > changed_lines.txt"
 
       - name: Check PHPCS issues on changed lines
