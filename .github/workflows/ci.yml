@@ -4,26 +4,9 @@ on:
   pull_request:
 
 jobs:
-  get-changed-files:
-    name: Get Changed Files
-    runs-on: ubuntu-latest
-
-    outputs:
-      stepOutputs: ${{ steps.get-changed-files.outputs.files }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Get changed files
-        id: get-changed-files
-        run: echo "::set-output name=files::$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '.php$')"
-
   phpcs:
     name: PHPCS Check
     runs-on: ubuntu-latest
-
-    needs: get-changed-files
 
     steps:
       - name: Checkout code
@@ -39,17 +22,20 @@ jobs:
       # - name: Check PHPCS issues
       #   run: vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- .
 
-      - name: Check PHPCS issues on modified lines
+      - name: Get changed files and lines
+        id: changed_files
         run: |
-          changed_files="${{ needs.get-changed-files.outputs.stepOutputs }}"
-          if [ -n "$changed_files" ]; then
-            phpcs_output=$(git diff --unified=0 --no-prefix ${{ github.event.before }} ${{ github.sha }} -- $changed_files | tail -n +4 | grep -E '^[+-]' | grep '.php$' | sed -e 's/^[+-]//g' | xargs -r vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6-)
+          git diff --name-status origin/main HEAD | awk '$1 != "D" {print $2}' > changed_files.txt
+          cat changed_files.txt | xargs -I % sh -c "git diff -U0 -- % | tail -n +5 | sed '/@@/!d;s/^[^+]/+/;s/^+//;s/[-+].*//' | sort -nu > changed_lines.txt"
 
-            if [ -n "$phpcs_output" ]; then
-              echo "$phpcs_output"
-              exit 1
+      - name: Check PHPCS issues on changed lines
+        run: |
+          while IFS= read -r file; do
+            lines=$(cat changed_lines.txt | grep "$file" | awk '{printf "%s,", $1}' | sed 's/,$//')
+            if [ ! -z "$lines" ]; then
+              vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- --report=emacs --sniffs=WordPress.Files.FileName,WordPress.Security.EscapeOutput $file --lines="$lines"
             fi
-          fi
+          done < changed_files.txt
 
   phpcbf:
     name: PHPCBF Fix
