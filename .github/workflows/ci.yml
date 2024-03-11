@@ -22,14 +22,20 @@ jobs:
       # - name: Check PHPCS issues
       #   run: vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- .
 
-      - name: Check PHPCS issues
+      - name: Get list of modified files and lines
+        id: modified-files
         run: |
-          git diff --name-only HEAD^..HEAD | grep '.php$' | while read file; do
-            git diff HEAD^..HEAD "$file" | grep '^[+-]' | grep -E '^\+[[:space:]]{2,}' | sed 's/^[+]//' > modified_lines.txt
-            if [[ -s modified_lines.txt ]]; then
-              vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- --report=full --stdin-path="$file" < modified_lines.txt
+          git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '.php$' > modified_files.txt
+          git diff --unified=0 ${{ github.event.before }} ${{ github.sha }} | grep -E '^\+\+\+|^\+\s' | grep -E '^\+\+\+ b/' | sed 's/\+\+\+ b\///' > modified_lines.txt
+
+      - name: Check PHPCS issues on modified lines
+        run: |
+          while IFS= read -r file; do
+            lines=$(grep "$file" modified_lines.txt)
+            if [ -n "$lines" ]; then
+              vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- "$file" --lines="$lines"
             fi
-          done
+          done < modified_files.txt
 
   phpcbf:
     name: PHPCBF Fix
