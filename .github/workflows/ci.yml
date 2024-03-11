@@ -41,13 +41,10 @@ jobs:
       - name: Install PHPCS
         run: composer require --dev squizlabs/php_codesniffer
 
-      # - name: Check PHPCS issues
-      #   run: vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- .
-
       - name: Get modified files and lines
-        id: changes
-        uses: tj-actions/changed-files@v42
+        id: changed_lines
+        uses: hestonhoffman/changed-lines@v1
 
       - name: Check PHPCS issues on modified lines
         run: |
-          echo "${{ steps.changes.outputs.modified_files }}" | xargs -I {} sh -c "vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- {}"
+          echo "${{ steps.changed_lines.outputs.changed_lines }}" | jq -r 'to_entries[] | "vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- \(.key) --line-range \(.value | join(","))"'
