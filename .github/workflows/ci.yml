@@ -11,6 +11,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Composer Update
+        run: |
+          composer update
+
       - name: Install PHPCS
         run: composer require --dev squizlabs/php_codesniffer
 
