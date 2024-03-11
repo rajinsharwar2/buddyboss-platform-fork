@@ -30,6 +30,10 @@ jobs:
         run: |
           echo "${{ steps.changes.outputs.modified_files }}" | xargs -I {} sh -c "vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- {}"
 
+      - name: Run PHPCBF
+        run: |
+          echo "${{ steps.changes.outputs.modified_files }}" | xargs -I {} sh -c "vendor/bin/phpcbf --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- {}"
+
   phpcbf:
     name: PHPCBF Fix
     runs-on: ubuntu-latest
