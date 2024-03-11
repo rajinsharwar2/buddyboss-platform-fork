@@ -49,7 +49,7 @@ jobs:
   #       run: |
   #         echo "${{ steps.changed_lines.outputs.changed_lines }}" | jq -r 'to_entries[] | "vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- \(.key) --line-range \(.value | join(","))"'
 
-  phpcs:
+  phpcs_check:
     name: PHPCS Check
     runs-on: ubuntu-latest
 
@@ -65,9 +65,9 @@ jobs:
         run: composer require --dev squizlabs/php_codesniffer
 
       - name: Get changed files and lines
-        id: changes
+        id: changed_lines
         uses: hestonhoffman/changed-lines@v1
 
-      - name: Check PHPCS issues on changed lines
+      - name: Check PHPCS issues on modified lines
         run: |
-          echo "${{ steps.changes.outputs.changed_files }}" | xargs -I {} sh -c "vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- {}"
+          echo "${{ steps.changed_lines.outputs.changed_files }}" | xargs -I {} sh -c "vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- {}"
