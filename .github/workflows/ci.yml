@@ -4,9 +4,28 @@ on:
   pull_request:
 
 jobs:
+  phpcbf:
+    name: PHPCBF Fix
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install PHPCS
+        run: composer require --dev squizlabs/php_codesniffer
+
+      - name: Get modified files and lines
+        id: changes
+        uses: tj-actions/changed-files@v42
+
+      - name: Fix PHPCBF issues on modified lines
+        run: |
+          echo "${{ steps.changes.outputs.modified_files }}" | xargs -I {} sh -c "vendor/bin/phpcbf --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- {}"
+
   phpcs:
     name: PHPCS Check
     runs-on: ubuntu-latest
+    needs: phpcbf
 
     steps:
       - name: Checkout code
@@ -29,43 +48,3 @@ jobs:
       - name: Check PHPCS issues on modified lines
         run: |
           echo "${{ steps.changes.outputs.modified_files }}" | xargs -I {} sh -c "vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- {}"
-
-      - name: Run PHPCBF
-        run: |
-          echo "${{ steps.changes.outputs.modified_files }}" | xargs -I {} sh -c "vendor/bin/phpcbf --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- {}"
-
-  phpcbf:
-    name: PHPCBF Fix
-    runs-on: ubuntu-latest
-    needs: phpcs
-    if: ${{ needs.phpcs.result == 'success' }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Composer Update
-        run: |
-          composer update
-
-      - name: Install PHPCS
-        run: composer require --dev squizlabs/php_codesniffer
-
-      - name: Fix PHPCBF issues
-        run: vendor/bin/phpcbf --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- .
-
-  pre-commit:
-    name: Pre-commit hook
-    runs-on: ubuntu-latest
-    needs: phpcbf
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Install PHPCS
-        run: composer require --dev squizlabs/php_codesniffer
-
-      - name: Check PHPCS issues on changed files
-        run: |
-          git diff --name-only HEAD^..HEAD | grep '.php$' | xargs -r vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6-
