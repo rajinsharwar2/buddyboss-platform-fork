@@ -21,9 +21,7 @@ jobs:
 
       - name: Check PHPCS issues on modified lines
         run: |
-          git diff --name-only HEAD^ HEAD | grep '.php$' | while read file; do
-            git diff -U0 HEAD^ HEAD "$file" | grep -E "^\+" | sed 's/^\+//' | vendor/bin/phpcs --standard=WordPress --extensions=php --stdin-path="$file" --runtime-set testVersion 5.6-
-          done
+          git diff --name-only HEAD^..HEAD | grep '.php$' | xargs -r -I{} sh -c 'git diff -U0 HEAD^..HEAD {} | vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --report=diff --runtime-set testVersion 5.6-'
 
   phpcbf:
     name: PHPCBF Fix
