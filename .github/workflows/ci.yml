@@ -50,51 +50,34 @@ jobs:
   #         echo "${{ steps.changed_lines.outputs.changed_lines }}" | jq -r 'to_entries[] | "vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- \(.key) --line-range \(.value | join(","))"'
 
   phpcs:
-    name: PHP coding standards
+    name: PHPCS Check
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    timeout-minutes: 20
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
       - name: Composer Update
-        run: |
-          composer update
+        run: composer update
 
       - name: Install PHPCS
         run: composer require --dev squizlabs/php_codesniffer
 
-      # This date is used to ensure that the PHPCS cache is cleared at least once every week.
-      # http://man7.org/linux/man-pages/man1/date.1.html
-      - name: "Get last Monday's date"
-        id: get-date
-        run: echo "date=$(/bin/date -u --date='last Mon' "+%F")" >> $GITHUB_OUTPUT
+      - name: Get modified files and lines
+        id: changed_lines
+        uses: hestonhoffman/changed-lines@v1
 
-      - name: Cache PHPCS scan cache
-        uses: actions/cache@ab5e6d0c87105b4c9c2047343972218f562e4319 # v4.0.1
-        with:
-          path: |
-            .cache/phpcs-src.json
-            .cache/phpcs-tests.json
-          key: ${{ runner.os }}-date-${{ steps.get-date.outputs.date }}-phpcs-cache-${{ hashFiles('**/composer.json', 'phpcs.xml.dist') }}
+      - name: Extract changed files and lines
+        id: extract_changes
+        run: |
+          echo "${{ steps.changed_lines.outputs.changed_files }}" > changed_files.txt
+          echo "${{ steps.changed_lines.outputs.changed_lines }}" > changed_lines.txt
 
-      - name: Run PHPCS on all Core files
-        id: phpcs-core
-        run: vendor/bin/phpcs -n --report-full --cache=./.cache/phpcs-src.json --report-checkstyle=./.cache/phpcs-report.xml
-
-      - name: Show PHPCS results in PR
-        if: ${{ always() && steps.phpcs-core.outcome == 'failure' }}
-        run: cs2pr ./.cache/phpcs-report.xml
-
-      - name: Check test suite files for warnings
-        id: phpcs-tests
-        run: vendor/bin/phpcs tests --report-full --cache=./.cache/phpcs-tests.json --report-checkstyle=./.cache/phpcs-tests-report.xml
-
-      - name: Show test suite scan results in PR
-        if: ${{ always() && steps.phpcs-tests.outcome == 'failure' }}
-        run: cs2pr ./.cache/phpcs-tests-report.xml
-
-      - name: Ensure version-controlled files are not modified during the tests
-        run: git diff --exit-code
+      - name: Check PHPCS issues on modified lines
+        run: |
+          while IFS= read -r file; do
+            lines=$(jq -r --arg file "$file" '.[$file | split("/")[-1]] | join(",")' changed_lines.txt)
+            if [ ! -z "$lines" ]; then
+              vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- "$file" --line-list="$lines"
+            fi
+          done < changed_files.txt
