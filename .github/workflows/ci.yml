@@ -19,8 +19,17 @@ jobs:
       - name: Install PHPCS
         run: composer require --dev squizlabs/php_codesniffer
 
+      # - name: Check PHPCS issues
+      #   run: vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- .
+
       - name: Check PHPCS issues
-        run: vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- .
+        run: |
+          git diff --name-only HEAD^..HEAD | grep '.php$' | while read file; do
+            git diff HEAD^..HEAD "$file" | grep '^[+-]' | grep -E '^\+[[:space:]]{2,}' | sed 's/^[+]//' > modified_lines.txt
+            if [[ -s modified_lines.txt ]]; then
+              vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- --report=full --stdin-path="$file" < modified_lines.txt
+            fi
+          done
 
   phpcbf:
     name: PHPCBF Fix
