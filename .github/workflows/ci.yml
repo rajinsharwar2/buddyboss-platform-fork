@@ -61,19 +61,18 @@ jobs:
           composer update
 
       - name: Install PHPCS
-        run: composer require --dev squizlabs/php_codesniffer
+        run: composer require symplify/easy-coding-standard --dev
 
-      - name: Get modified files and lines
-        id: changes
-        run: |
-          MODIFIED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '\.php$' || true)
-          if [ -n "${MODIFIED_FILES}" ]; then
-            echo "::set-output name=modified_files::${MODIFIED_FILES}"
-          else
-            echo "No modified PHP files found."
-            exit 0
-          fi
+      # - name: Get modified files and lines
+      #   id: changes
+      #   run: |
+      #     MODIFIED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '\.php$' || true)
+      #     if [ -n "${MODIFIED_FILES}" ]; then
+      #       echo "::set-output name=modified_files::${MODIFIED_FILES}"
+      #     else
+      #       echo "No modified PHP files found."
+      #       exit 0
+      #     fi
 
       - name: Check PHPCS issues on modified lines
-        run: |
-          echo "${{ steps.changes.outputs.modified_files }}" | xargs -I {} sh -c "vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- {}"
+        run: vendor/bin/ecs
