@@ -2,8 +2,6 @@ name: PHP Code Quality
 
 on:
   push:
-    branches:
-      - main
 
 jobs:
   phpcs:
