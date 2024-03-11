@@ -29,8 +29,6 @@ jobs:
   phpcs:
     name: PHPCS Check
     runs-on: ubuntu-latest
-    needs: phpcbf
-    if: ${{ needs.phpcbf.result == 'failure' }}
 
     steps:
       - name: Checkout code
