@@ -1,0 +1,53 @@
+name: PHP Code Quality
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  phpcs:
+    name: PHPCS Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install PHPCS
+        run: composer require --dev squizlabs/php_codesniffer
+
+      - name: Check PHPCS issues
+        run: vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- .
+
+  phpcbf:
+    name: PHPCBF Fix
+    runs-on: ubuntu-latest
+    needs: phpcs
+    if: ${{ needs.phpcs.result == 'success' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install PHPCS
+        run: composer require --dev squizlabs/php_codesniffer
+
+      - name: Fix PHPCBF issues
+        run: vendor/bin/phpcbf --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- .
+
+  pre-commit:
+    name: Pre-commit hook
+    runs-on: ubuntu-latest
+    needs: phpcbf
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install PHPCS
+        run: composer require --dev squizlabs/php_codesniffer
+
+      - name: Check PHPCS issues on changed files
+        run: |
+          git diff --name-only HEAD^..HEAD | grep '.php$' | xargs -r vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6-
