@@ -49,7 +49,7 @@ jobs:
   #       run: |
   #         echo "${{ steps.changed_lines.outputs.changed_lines }}" | jq -r 'to_entries[] | "vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- \(.key) --line-range \(.value | join(","))"'
 
-  phpcs:
+  phpcs_check:
     name: PHPCS Check
     runs-on: ubuntu-latest
 
@@ -66,17 +66,25 @@ jobs:
 
       - name: Get modified files and lines
         id: changes
-        uses: tj-actions/changed-files@v42
+        uses: hestonhoffman/changed-lines@v1
 
       - name: Check PHPCS issues on modified lines
         run: |
-          # Loop through modified files
-          echo "${{ steps.changes.outputs.modified_files }}" | while read -r file; do
-            # Get modified lines for the file
-            modified_lines=$(echo "${{ steps.changes.outputs.modified_lines }}" | jq -r ".\"$file\"[]")
+          modified_files_json="${{ steps.changes.outputs.files }}"
+          phpcs_report=""
 
-            # Run PHPCS only on modified lines
-            for line in $modified_lines; do
-              vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- --line="$line" "$file"
-            done
+          for file in $(echo "${modified_files_json}" | jq -r 'keys[]'); do
+            lines=$(echo "${modified_files_json}" | jq -r ".${file}[]")
+            phpcs_output=$(vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- ${file} | grep -E "^\s*($lines):")
+            
+            if [ -n "${phpcs_output}" ]; then
+              phpcs_report="${phpcs_report}${phpcs_output}\n"
+            fi
           done
+
+          if [ -n "${phpcs_report}" ]; then
+            echo -e "${phpcs_report}"
+            exit 1  # Fail the workflow if there are PHPCS issues
+          else
+            echo "No PHPCS issues found on modified lines."
+          fi
