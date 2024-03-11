@@ -22,21 +22,13 @@ jobs:
       # - name: Check PHPCS issues
       #   run: vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- .
 
-      - name: Determine modified files
-        id: determine_modified_files
-        run: |
-          echo 'Determine modified files'
-          changed_files=$(git diff --name-only HEAD^..HEAD | grep '.php$')
-          echo "::set-output name=changed_files::$changed_files"
+      - name: Get modified files and lines
+        id: changes
+        uses: tj-actions/changed-files@v42
 
-      - name: Check PHPCS issues on modified files
+      - name: Check PHPCS issues on modified lines
         run: |
-          changed_files="${{ steps.determine_modified_files.outputs.changed_files }}"
-          if [[ -z $changed_files ]]; then
-            echo "No PHP files were modified."
-            exit 0
-          fi
-          vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- $changed_files
+          echo "${{ steps.changes.outputs.modified_files }}" | xargs -I {} sh -c "vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- {}"
 
   phpcbf:
     name: PHPCBF Fix
