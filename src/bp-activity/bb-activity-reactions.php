@@ -9,7 +9,7 @@
  */
 
 // Exit if accessed directly.
-defined(    ' ABSPATH') || exit;
+defined(  ' ABSPATH') || exit;
 
 add_action( 'wp_ajax_bb_get_reactions', 'bb_get_activity_reaction_ajax_callback' );
 add_action( 'wp_ajax_nopriv_bb_get_reactions', 'bb_get_activity_reaction_ajax_callback' );
