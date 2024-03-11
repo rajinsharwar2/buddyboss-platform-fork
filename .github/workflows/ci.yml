@@ -50,6 +50,7 @@ jobs:
   #         echo "${{ steps.changed_lines.outputs.changed_lines }}" | jq -r 'to_entries[] | "vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- \(.key) --line-range \(.value | join(","))"'
 
   phpcs:
+    name: PHPCS Check
     runs-on: ubuntu-latest
 
     steps:
@@ -61,18 +62,21 @@ jobs:
           composer update
 
       - name: Install PHPCS
-        run: composer require symplify/easy-coding-standard --dev
+        run: composer require --dev squizlabs/php_codesniffer
 
-      # - name: Get modified files and lines
-      #   id: changes
-      #   run: |
-      #     MODIFIED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '\.php$' || true)
-      #     if [ -n "${MODIFIED_FILES}" ]; then
-      #       echo "::set-output name=modified_files::${MODIFIED_FILES}"
-      #     else
-      #       echo "No modified PHP files found."
-      #       exit 0
-      #     fi
+      - name: Get modified files and lines
+        id: changes
+        uses: tj-actions/changed-files@v42
 
       - name: Check PHPCS issues on modified lines
-        run: vendor/bin/ecs
+        run: |
+          # Loop through modified files
+          echo "${{ steps.changes.outputs.modified_files }}" | while read -r file; do
+            # Get modified lines for the file
+            modified_lines=$(echo "${{ steps.changes.outputs.modified_lines }}" | jq -r ".\"$file\"[]")
+
+            # Run PHPCS only on modified lines
+            for line in $modified_lines; do
+              vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- --line="$line" "$file"
+            done
+          done
