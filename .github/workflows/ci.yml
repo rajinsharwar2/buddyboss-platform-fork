@@ -4,20 +4,9 @@ on:
   pull_request:
 
 jobs:
-  get-default-branch:
-    name: Get Default Branch
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Get default branch name
-        id: get_default_branch
-        run: |
-          echo "::set-output name=default_branch::$(curl -s -H 'Accept: application/vnd.github.v3+json' https://api.github.com/repos/${{ github.repository }}/ | jq -r '.default_branch')"
-
   phpcs:
     name: PHPCS Check
     runs-on: ubuntu-latest
-    needs: get-default-branch
 
     steps:
       - name: Checkout code
@@ -33,20 +22,21 @@ jobs:
       # - name: Check PHPCS issues
       #   run: vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- .
 
-      - name: Get changed files and lines
-        id: changed_files
+      - name: Determine modified files
+        id: determine_modified_files
         run: |
-          git diff --name-status origin/${{ needs.get-default-branch.outputs.default_branch }} HEAD | awk '$1 != "D" {print $2}' > changed_files.txt
-          cat changed_files.txt | xargs -I % sh -c "git diff -U0 -- % | tail -n +5 | sed '/@@/!d;s/^[^+]/+/;s/^+//;s/[-+].*//' | sort -nu > changed_lines.txt"
+          echo 'Determine modified files'
+          changed_files=$(git diff --name-only HEAD^..HEAD | grep '.php$')
+          echo "::set-output name=changed_files::$changed_files"
 
-      - name: Check PHPCS issues on changed lines
+      - name: Check PHPCS issues on modified files
         run: |
-          while IFS= read -r file; do
-            lines=$(cat changed_lines.txt | grep "$file" | awk '{printf "%s,", $1}' | sed 's/,$//')
-            if [ ! -z "$lines" ]; then
-              vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- --report=emacs --sniffs=WordPress.Files.FileName,WordPress.Security.EscapeOutput $file --lines="$lines"
-            fi
-          done < changed_files.txt
+          changed_files="${{ steps.determine_modified_files.outputs.changed_files }}"
+          if [[ -z $changed_files ]]; then
+            echo "No PHP files were modified."
+            exit 0
+          fi
+          vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6- $changed_files
 
   phpcbf:
     name: PHPCBF Fix
