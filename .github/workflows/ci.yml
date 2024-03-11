@@ -43,7 +43,12 @@ jobs:
         run: |
           changed_files="${{ needs.get-changed-files.outputs.stepOutputs }}"
           if [ -n "$changed_files" ]; then
-            git diff --unified=0 --no-prefix ${{ github.event.before }} ${{ github.sha }} -- $changed_files | tail -n +4 | grep -E '^[+-]' | grep '.php$' | sed -e 's/^[+-]//g' | xargs -r vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6-
+            phpcs_output=$(git diff --unified=0 --no-prefix ${{ github.event.before }} ${{ github.sha }} -- $changed_files | tail -n +4 | grep -E '^[+-]' | grep '.php$' | sed -e 's/^[+-]//g' | xargs -r vendor/bin/phpcs --standard=WordPress --extensions=php --ignore=*/vendor/* --runtime-set testVersion 5.6-)
+
+            if [ -n "$phpcs_output" ]; then
+              echo "$phpcs_output"
+              exit 1
+            fi
           fi
 
   phpcbf:
