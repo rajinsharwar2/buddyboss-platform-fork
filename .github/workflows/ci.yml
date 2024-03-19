@@ -24,11 +24,10 @@ jobs:
       # - name: Install PHPCS
       #   run: composer require --dev squizlabs/php_codesniffer
 
-      - name: Run PHPCBF
-        run: vendor/bin/phpcbf
+      - name: Determine changed files
+        id: changed-files
+        run: echo "::set-output name=files::$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '\.php$')"
 
-      - name: Commit changes (if any)
+      - name: Run PHPCBF on changed files
         run: |
-          git diff --exit-code --quiet || git commit -am "Fix coding standards issues" && git push origin HEAD:$GITHUB_REF
-        env:
-          GITHUB_REF: ${{ github.head_ref }}
+          echo "${{ steps.changed-files.outputs.files }}" | xargs -n1 vendor/bin/phpcbf
