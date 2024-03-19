@@ -21,11 +21,11 @@ jobs:
         run: |
           composer update
 
-      - name: Install PHPCS
-        run: composer require --dev squizlabs/php_codesniffer
+      # - name: Install PHPCS
+      #   run: composer require --dev squizlabs/php_codesniffer
 
       - name: Run PHPCBF
-        run: vendor/bin/phpcbf --standard=PSR12 .
+        run: vendor/bin/phpcbf
 
       - name: Commit changes (if any)
         run: |
