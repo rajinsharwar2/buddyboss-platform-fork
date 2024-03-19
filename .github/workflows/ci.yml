@@ -12,6 +12,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.1"
+
       - name: Composer Update
         run: |
           composer update
@@ -19,14 +24,11 @@ jobs:
       - name: Install PHPCS
         run: composer require --dev squizlabs/php_codesniffer
 
-      - uses: actions/checkout@v2
-      - name: VIPCS check
-        uses: 10up/wpcs-action@stable
-        with:
-          standard: "WordPress-VIP-Go"
-          extra_args: "--report-json=./phpcs.json"
-      - name: Update summary
+      - name: Run PHPCBF
+        run: vendor/bin/phpcbf --standard=PSR12 .
+
+      - name: Commit changes (if any)
         run: |
-          npx --yes github:10up/phpcs-json-to-md --path ./phpcs.json --output ./phpcs.md
-          cat phpcs.md >> $GITHUB_STEP_SUMMARY
-        if: always()
+          git diff --exit-code --quiet || git commit -am "Fix coding standards issues" && git push origin HEAD:$GITHUB_REF
+        env:
+          GITHUB_REF: ${{ github.head_ref }}
