@@ -17,7 +17,7 @@ jobs:
           if [[ $(git rev-parse --abbrev-ref HEAD) == "release" || $(git rev-parse --abbrev-ref HEAD) == "master" ]]; then
             base_branch=$(git rev-parse HEAD)
           else
-            base_branch=$(git merge-base HEAD main)
+            base_branch=$(git merge-base HEAD release)
           fi
           git diff --name-only $base_branch HEAD > diff.txt
         shell: bash
