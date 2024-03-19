@@ -14,7 +14,7 @@ jobs:
 
       - name: Generate diff
         run: |
-          if [[ $(git rev-parse --abbrev-ref HEAD) == "main" || $(git rev-parse --abbrev-ref HEAD) == "master" ]]; then
+          if [[ $(git rev-parse --abbrev-ref HEAD) == "release" || $(git rev-parse --abbrev-ref HEAD) == "master" ]]; then
             base_branch=$(git rev-parse HEAD)
           else
             base_branch=$(git merge-base HEAD main)
