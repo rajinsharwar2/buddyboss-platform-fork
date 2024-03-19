@@ -12,22 +12,28 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Generate diff.txt
+        run: git diff --name-only ${{ github.event.before }} ${{ github.sha }} > diff.txt
+
+      - name: Save diff.txt as artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: diff
+          path: diff.txt
+
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.1"
 
-      - name: Composer Update
+      - name: Composer install
         run: |
-          composer update
+          composer install
 
-      # - name: Install PHPCS
-      #   run: composer require --dev squizlabs/php_codesniffer
+      - name: Install Coverage
+        run: composer require --dev exussum12/coverage-checker
 
-      - name: Determine changed files
-        id: changed-files
-        run: echo "::set-output name=files::$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '\.php$')"
-
-      - name: Run PHPCBF on changed files
+      - name: Run PHPCS on changed files
         run: |
-          echo "${{ steps.changed-files.outputs.files }}" | xargs -n1 vendor/bin/phpcbf
+          phpcs --standard=psr2 --report=json $(cat diff.txt) > phpcs.json || true
+          ./vendor/bin/diffFilter --phpcs diff.txt phpcs.json 100
