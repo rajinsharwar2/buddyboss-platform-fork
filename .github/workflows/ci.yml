@@ -12,14 +12,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Generate diff.txt
-        run: git diff --name-only ${{ github.event.before }} ${{ github.sha }} > diff.txt
-
-      - name: Save diff.txt as artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: diff
-          path: diff.txt
+      - name: Generate diff
+        run: git diff HEAD^ HEAD --name-only > diff.txt
+        shell: bash
 
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
@@ -33,7 +28,12 @@ jobs:
       - name: Install Coverage
         run: composer require --dev exussum12/coverage-checker
 
-      - name: Run PHPCS on changed files
+      - name: Run PHPCS only on changed files
         run: |
-          phpcs --standard=psr2 --report=json $(cat diff.txt) > phpcs.json || true
+          cat diff.txt | xargs phpcs --standard=PSR12 --report=json > phpcs.json || true
+        shell: bash
+
+      - name: Run diffFilter
+        run: |
           ./vendor/bin/diffFilter --phpcs diff.txt phpcs.json 100
+        shell: bash
